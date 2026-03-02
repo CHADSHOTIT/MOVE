@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum MovementStatus {
+  OFFICE
+  LONDON
+  TELFORD
+  FRANCE
+  TRAINING
+  WFH
+  OTHER
+}
+
+enum AssignmentType {
+  OWNER
+  TEMP
+}
+
+model Staff {
+  id             Int             @id @default(autoincrement())
+  name           String          @unique
+  isOwner        Boolean         @default(false)
+  ownerBayNumber Int?
+  active         Boolean         @default(true)
+  movements      Movement[]
+  officeRequests OfficeRequest[]
+  assignments    BayAssignment[] @relation("AssignedStaff")
+
+  @@index([active])
+}
+
+model Movement {
+  id        Int            @id @default(autoincrement())
+  staffId   Int
+  dateISO   String
+  status    MovementStatus
+  noteText  String?
+  updatedAt DateTime       @updatedAt
+  staff     Staff          @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, dateISO])
+  @@index([dateISO])
+}
+
+model OfficeRequest {
+  id          Int      @id @default(autoincrement())
+  staffId     Int
+  dateISO     String
+  requestedAt DateTime
+  staff       Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, dateISO])
+  @@index([dateISO, requestedAt])
+}
+
+model BayAssignment {
+  id                Int            @id @default(autoincrement())
+  dateISO           String
+  bayNumber         Int
+  assignedToStaffId Int
+  assignmentType    AssignmentType
+  assignedAt        DateTime       @default(now())
+  assignedTo        Staff           @relation("AssignedStaff", fields: [assignedToStaffId], references: [id], onDelete: Cascade)
+
+  @@unique([dateISO, bayNumber])
+  @@index([dateISO])
+}
+
+model AllocationMeta {
+  dateISO         String   @id
+  lastComputedAt  DateTime
+}
+
+model Setting {
+  key   String @id
+  value String
+}
